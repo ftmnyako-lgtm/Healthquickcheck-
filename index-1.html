@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Healthquickcheck</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root {
+    --bg: var(--tg-theme-bg-color, #ffffff);
+    --text: var(--tg-theme-text-color, #111111);
+    --hint: var(--tg-theme-hint-color, #999999);
+    --button: var(--tg-theme-button-color, #2481cc);
+    --button-text: var(--tg-theme-button-text-color, #ffffff);
+    --secondary-bg: var(--tg-theme-secondary-bg-color, #f4f4f5);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 16px;
+    padding-top: env(safe-area-inset-top, 16px);
+    padding-bottom: env(safe-area-inset-bottom, 16px);
+  }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  p.sub { color: var(--hint); margin: 0 0 20px; font-size: 14px; }
+  .card {
+    background: var(--secondary-bg);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  .card h2 { font-size: 15px; margin: 0 0 6px; }
+  .card p { font-size: 13px; color: var(--hint); margin: 0; }
+  button.primary {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 12px;
+    background: var(--button);
+    color: var(--button-text);
+    font-size: 16px;
+    font-weight: 600;
+    margin-top: 20px;
+  }
+  #user-info { font-size: 12px; color: var(--hint); margin-top: 24px; }
+</style>
+</head>
+<body>
+  <h1>Health Quick Check</h1>
+  <p class="sub">Fast symptom check-in, right inside Telegram.</p>
+
+  <div class="card">
+    <h2>Daily check-in</h2>
+    <p>Log how you're feeling today in under 30 seconds.</p>
+  </div>
+
+  <div class="card">
+    <h2>Premium report</h2>
+    <p>Unlock a detailed weekly summary for 50 Stars.</p>
+  </div>
+
+  <button class="primary" id="buy-btn">Unlock Premium — 50 ⭐</button>
+
+  <div id="user-info"></div>
+
+<script>
+  const tg = window.Telegram.WebApp;
+  tg.ready();
+  tg.expand();
+
+  // Show basic user info (comes from Telegram, not verified — verify server-side via initData)
+  const user = tg.initDataUnsafe?.user;
+  if (user) {
+    document.getElementById('user-info').textContent =
+      `Signed in as ${user.first_name}${user.username ? ' (@' + user.username + ')' : ''}`;
+  }
+
+  // Telegram's native bottom button (optional alternative to the HTML button above)
+  tg.MainButton.setText('Close');
+  tg.MainButton.onClick(() => tg.close());
+
+  // Trigger a Telegram Stars payment
+  document.getElementById('buy-btn').addEventListener('click', async () => {
+    tg.HapticFeedback.impactOccurred('light');
+
+    // Ask YOUR backend to create an invoice link (see bot.js), then open it
+    const res = await fetch('https://your-backend.example.com/create-invoice', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        initData: tg.initData, // backend must verify this against the bot token
+        item: 'premium_report'
+      })
+    });
+    const { invoiceLink } = await res.json();
+
+    tg.openInvoice(invoiceLink, (status) => {
+      if (status === 'paid') {
+        tg.showAlert('Thanks! Premium unlocked.');
+      } else if (status === 'failed') {
+        tg.showAlert('Payment failed, please try again.');
+      }
+    });
+  });
+</script>
+</body>
+</html>
